@@ -31,7 +31,7 @@ def main():
         event, values = window.read()
         if(event in ["EXIT", sg.WINDOW_CLOSED]):
             break
-        if(re.match(r'GAME_.*\.py', event)):
+        if(re.match(r'GAME_.*\.py', os.path.basename(event))):
             window.close()
             launchGame(event)
             break
@@ -65,12 +65,13 @@ def getWindowLayout(gameList:list)->list:
     '''
     gameListButtons = []
     if(gameList):
-        for game in gameList:
+        for gamePath in gameList:
+            game = os.path.basename(gamePath) # isolate file name from path.
             gameListButtons.append(
                 [
                     sg.Button(
-                        game.replace('GAME_', '').replace('.py', '').capitalize(), 
-                        key=game
+                        game.replace('GAME_', '').replace('.py', '').capitalize(), # clean up the name 
+                        key=gamePath # the key to use is the path of the file.
                     )
                 ]
             )
@@ -97,9 +98,8 @@ def getGameList()->list:
     '''
     Returns a list of games that can be played.
     '''
-    pyFileList = glob.glob(os.path.join(BASEDIR, "GAME_*.py"))
-    gList = [os.path.basename(g) for g in pyFileList]
-    return gList
+    pyFileList = glob.glob(os.path.join(BASEDIR, 'games', 'GAME_*', "GAME_*.py"))
+    return pyFileList
 
     
 
