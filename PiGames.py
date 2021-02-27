@@ -67,7 +67,12 @@ def getWindowLayout(gameList:list)->list:
     if(gameList):
         for game in gameList:
             gameListButtons.append(
-                [sg.Button(game, key=game)]
+                [
+                    sg.Button(
+                        game.replace('GAME_', '').replace('.py', '').capitalize(), 
+                        key=game
+                    )
+                ]
             )
     else:
         gameListButtons.append(
