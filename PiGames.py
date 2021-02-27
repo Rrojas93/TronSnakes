@@ -6,8 +6,8 @@
     Author: Raul Rojas
     Contact: rrojas994@gmail.com
     Description: 
-        This is a collection of small games that are utilizing the PyGame module. 
-        These games are inspired from existing classical games but with a twist.
+        Opens a small game launcher for all available py games in the "games"
+        directory in the project.
 '''
 
 import PySimpleGUI as sg
