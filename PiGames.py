@@ -50,6 +50,8 @@ def launchGame(game:str):
         shell=True,
         cwd=os.path.dirname(game)
     )
+    window.close()
+    gameProc.wait() # wait for the game to exit to close out launcher process.
 
 def getGameSelectWindow(gameList:list)->sg.Window:
     '''
