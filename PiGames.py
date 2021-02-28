@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 '''
@@ -14,7 +13,7 @@ import PySimpleGUI as sg
 import os
 import glob
 import re
-
+import subprocess
 
 BASEDIR = os.path.dirname(__file__)
 window = None
@@ -40,10 +39,17 @@ def launchGame(game:str):
     '''
     Launches a game in a subprocess. 
 
-    :param game: Game file string.
+    :param game: Game file path string.
     '''
-    print(f"Launching game: {game}")
-    
+    gameProc = subprocess.Popen(
+        f"python {game}", 
+        stdin=None, 
+        stdout=None, 
+        stderr=None, 
+        close_fds=True,
+        shell=True,
+        cwd=os.path.dirname(game)
+    )
 
 def getGameSelectWindow(gameList:list)->sg.Window:
     '''
