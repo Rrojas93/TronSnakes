@@ -22,6 +22,13 @@ else.
 
 ## Version History
 
+### V0.2.0
+* Launcher now actually launches the selected game. 
+* Added basic functionality to snake game. 
+    * Snake is drawn to screen with a length of 3 cells as a starting point.
+    * Movement can be controlled with arrow keys on the keyboard.
+    * There still isn't any food for the snake to pick up.
+
 ### V0.1.0
 * Initial version of the project. 
 * Contains a very basic GUI which generates a list of games from the games directory. 
