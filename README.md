@@ -22,6 +22,10 @@ else.
 
 ## Version History
 
+### V1.0.0
+* Snake Game is now in a most basic complete state. 
+    * Single player only. Game resets upon colliding with self or screen bounds.
+
 ### V0.2.0
 * Launcher now actually launches the selected game. 
 * Added basic functionality to snake game. 
