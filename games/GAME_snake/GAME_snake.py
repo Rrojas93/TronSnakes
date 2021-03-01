@@ -8,15 +8,18 @@
     Description:
         The game of snake. Pretty much just as simple as you can get.
 '''
-import os, sys, time
+import os, sys, time, random
 import pygame
 pygame.init()
 
 screen_size = (800,600)
 screen = pygame.display.set_mode(size=screen_size)
-refresh_delay = 0.05 # equates to game speed, the lower the number the faster the snake moves.
+clock = pygame.time.Clock()
+refresh_delay = 0.03 # equates to game speed, the lower the number the faster the snake moves.
 last_refresh = 0 # the last time a refresh occured.
 snake = None
+game_state = None
+food = None
 
 def main():
     """
@@ -24,32 +27,93 @@ def main():
     """
     global snake
     global last_refresh
-    snake = Snake(
-        int(screen_size[0]/2), 
-        int(screen_size[1]/2),
-        10, 
-        screen_size
-    )
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if(event.key == pygame.K_ESCAPE):
-                    sys.exit()
-                snake.change_direction(event.key)
-        if((last_refresh+refresh_delay) <= time.time()):
-            update()
-            last_refresh = time.time()
-        pygame.display.update()
+    global game_state
+    global food
+    game_state = GameState()
+    queue_next_move = None
+    while game_state.state:
+        if(game_state.state == GameState.SETUP):
+            snake = Snake(
+                int(screen_size[0]/2), 
+                int(screen_size[1]/2),
+                10, 
+                screen_size
+            )
+            game_state.next()
+        if(game_state.state == GameState.PLAY):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    game_state.set(GameState.CLOSE)
+                    break
+                if event.type == pygame.KEYDOWN:
+                    if(event.key == pygame.K_ESCAPE):
+                        game_state.set(GameState.CLOSE)
+                        break
+                    queue_next_move = event.key
+            if((last_refresh+refresh_delay) <= time.time()):
+                if(queue_next_move):
+                    snake.change_direction(queue_next_move)
+                    queue_next_move = None
+                update()
+                last_refresh = time.time()
+            pygame.display.update()
+            clock.tick(30)
+        if(game_state.state == GameState.GAMEOVER):
+            game_state.set(1)
+            food = None
 
 def update():
     '''
     Redraws all game objects on the screen.
     '''
+    global food
     snake.move() # move the snake first so screen represents current location.
+    
+    if(snake.out_of_bounds() or snake.collided_with_self()):
+        game_state.set(GameState.GAMEOVER)
+        return
+    elif(snake.collides_with(food)):
+        snake.add_cell_head(food)
+        food = None
     screen.fill(Colors.BLACK)
     snake.draw()
+    addFood()
+
+def addFood():
+    '''
+    If there is no food on the screen, add one.
+    '''
+    global food
+    if(food is None):
+        x = random.randint(0, screen_size[0])
+        x = x - (x % snake.head.size)
+        y = random.randint(0, screen_size[1])
+        y = y - (y % snake.head.size)
+        food = Cell(x, y, snake.head.size)
+    food.draw(Colors.WHITE)
+
+class GameState():
+    CLOSE = 0
+    SETUP = 1
+    PLAY = 2
+    GAMEOVER = 3
+    NONESTATE = 4
+    def __init__(self, state=1):
+        self.state = state
+    
+    def next(self)->int:
+        '''
+        Changes the current state to the next state. If NONESTATE is reached or 
+        passed, will reset back to state = 1.
+        '''
+        self.state += 1
+        if(self.state >= GameState.NONESTATE):
+            self.state = 1
+    
+    def set(self, new_state):
+        self.state = new_state
+    
+        
 
 class Colors():
     WHITE = (255, 255, 255)
@@ -59,7 +123,6 @@ class Colors():
     BLUE = (0, 0, 255)
     def __init__(self):
         pass
-
 
 class Vector():
     """
@@ -130,6 +193,12 @@ class Cell():
         self.rect = pygame.Rect(self.x, self.y, size, size)
         self.parent = parent_cell
         self.child = child_cell
+
+    def __eq__(self, other):
+        if(isinstance(other, Cell)):
+            return self.x == other.x and self.y == other.y
+        else:
+            return False
 
     def get_head(self):
         '''
@@ -256,16 +325,16 @@ class Snake():
         elif(key_code == pygame.K_DOWN and self.direction != Vector.up()):
             self.direction = Vector.down()
 
-    def add_cell_head(self, location_x:int, location_y:int):
+    def add_cell_head(self, new_cell:Cell):
         """
         Addes a new cell to the head of the snake. 
 
-        :param location_x: The x location of the new cell.
-        :param location_y: The y locaiton of the new cell.
+        :param new_cell: New cell to add as a head.
         """
-        old_head = self.head
-        self.head = Cell(location_x, location_y, self.cell_size, child_cell=old_head)
-        old_head.parent = self.head
+        new_cell.child = self.head
+        self.head.parent = new_cell
+        self.head = new_cell
+        self.length += 1
     
     def out_of_bounds(self)->bool:
         '''
@@ -273,13 +342,36 @@ class Snake():
         '''
         if(
             self.head.x < 0 or
-            self.head.x > screen_size[0] or
+            self.head.x >= screen_size[0] or
             self.head.y < 0 or
-            self.head.y > screen_size[1]
+            self.head.y >= screen_size[1]
         ):
             return True
         else:
             return False
+    
+    def collides_with(self, other_cell)->bool:
+        '''
+        Returns if the input cell has collided with any cell in the snakes 
+        chain.
+        '''
+        current_cell = self.head
+        while(current_cell is not None):
+            if(current_cell == other_cell):
+                return True
+            current_cell = current_cell.child
+        return False
+    
+    def collided_with_self(self)->bool:
+        '''
+        Returns if the snake has collided with itself.
+        '''
+        current_cell = self.head.child
+        while(current_cell is not None):
+            if(self.head == current_cell):
+                return True
+            current_cell = current_cell.child
+        return False
 
 
 if __name__ == "__main__":
