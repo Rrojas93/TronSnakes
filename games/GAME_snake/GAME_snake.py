@@ -8,12 +8,12 @@
     Description:
         The game of snake. Pretty much just as simple as you can get.
 '''
-import os, sys, time, random
+import os, sys, time, random, platform
 import pygame
 pygame.init()
-
-screen_size = (800,600)
-screen = pygame.display.set_mode(size=screen_size)
+flags = pygame.FULLSCREEN if platform.system().lower() == 'linux' else 0
+screen_size = (800,480)
+screen = pygame.display.set_mode(size=screen_size, flags=flags)
 clock = pygame.time.Clock()
 refresh_delay = 0.03 # equates to game speed, the lower the number the faster the snake moves.
 last_refresh = 0 # the last time a refresh occured.
