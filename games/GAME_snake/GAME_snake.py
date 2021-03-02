@@ -84,12 +84,15 @@ def addFood():
     If there is no food on the screen, add one.
     '''
     global food
+    cell_size = snake.head.size
     if(food is None):
         x = random.randint(0, screen_size[0])
-        x = x - (x % snake.head.size)
+        x = x - cell_size if x > cell_size else x # so a block wont spawn outside of right bound.
+        x = x - (x % cell_size) # adjust so random ints are only multiples of cell size
         y = random.randint(0, screen_size[1])
-        y = y - (y % snake.head.size)
-        food = Cell(x, y, snake.head.size)
+        y = y - cell_size if y > cell_size else y
+        y = y - (y % cell_size)
+        food = Cell(x, y, cell_size)
     food.draw(Colors.WHITE)
 
 class GameState():
