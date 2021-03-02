@@ -14,8 +14,9 @@ import os
 import glob
 import re
 import subprocess
+import platform
 
-BASEDIR = os.path.dirname(__file__)
+BASEDIR = os.path.dirname(os.path.abspath(__file__))
 window = None
 listOfGames = None
 
@@ -41,8 +42,9 @@ def launchGame(game:str):
 
     :param game: Game file path string.
     '''
+    python_version = 'python3' if platform.system().lower() == 'linux' else 'python'
     gameProc = subprocess.Popen(
-        f"python {game}", 
+        f"{python_version} {game}", 
         stdin=None, 
         stdout=None, 
         stderr=None, 
