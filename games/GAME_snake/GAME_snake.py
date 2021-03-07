@@ -25,7 +25,7 @@ def main():
     """
     Running the main game loop and renders the game using pygame module.
     """
-    game_env = Environment(screen_size, 10, True)
+    game_env = Environment(screen_size, 10, False)
     game_env.game_state = GameState(GameState.SETUP)
     refresh_delay = 0.02
     last_refresh = 0
@@ -82,6 +82,8 @@ def main():
         clock.tick(tic_rate)
 
 class InputInterface():
+    # informal interface. Mostly just here to demonstrate what the intentional 
+    #   use is.
     def scan_p1(self):
         '''
         Override this funtion to define your scanning function for player 1. 
@@ -107,7 +109,7 @@ class InputInterface():
         pass
 
 class KeyboardInput(InputInterface):
-    def scan_p1(self, pygame_event):
+    def scan_p2(self, pygame_event):
         if(pygame_event.type == pygame.KEYDOWN):
             if(pygame_event.key == pygame.K_UP):
                 return Vector.up()
@@ -118,7 +120,7 @@ class KeyboardInput(InputInterface):
             elif(pygame_event.key == pygame.K_RIGHT):
                 return Vector.right()
         return None
-    def scan_p2(self, pygame_event):
+    def scan_p1(self, pygame_event):
         if(pygame_event.type == pygame.KEYDOWN):
             if(pygame_event.key == pygame.K_w):
                 return Vector.up()
@@ -131,41 +133,57 @@ class KeyboardInput(InputInterface):
         return None
 
 class GamePadInput(InputInterface):
-    def __init__(self):
+    def __init__(self, joystick_threshold=0.5):
+        """
+        Provides an interface for a gamepad as an input. 
+
+        :param joystick_threshold: Joystick values range from -1 to 1. The threshold 
+        represents the value in which the absolute value of the reading will be accepted. 
+        """
+        self.joystick_threshold = joystick_threshold
         pygame.joystick.init()
-
-        pass
+        self.joysticks = list()
+        for i in range(pygame.joystick.get_count()):
+            self.joysticks.append(pygame.joystick.Joystick(i))
+            self.joysticks[i].init()
+            print(f'Added Gamepad: {self.joysticks[i].get_guid()}')
         
-    def scan_p1(self, pygame_event):
-        # os.system('cls')
-        # print(f'Joystick Init: {pygame.joystick.get_init()}')
-        if(pygame_event.type == pygame.JOYBUTTONDOWN):
-            print("Pressed Joystick Button")
-        elif(pygame_event.type == pygame.JOYBUTTONUP):
-            print("Released Joystick Button")
-
-        sticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_count())]
-        # for joystick in sticks:
-        if(sticks):
-            sticks[0].init()
-            # print(f'Joystick Name: {sticks[0].get_name()}')
-
-            # for i in range(sticks[0].get_numaxes()):
-            #     print(f'Axes: {i}, Value: {sticks[0].get_axis(i)}')
-
-            # for j in range(sticks[0].get_numbuttons()):
-            #     print(f'Button: {j}, Value: {sticks[0].get_button(j)}')
-
-            for i in range(sticks[0].get_numhats()):
-                # print(f'Hat: {i}, Value: {sticks[0].get_hat(i)}')
-                hat_val = sticks[0].get_hat(i)
-                if(hat_val[0] or hat_val[1]):
-                    print(f'Hat: {i}, Value: {sticks[0].get_hat(i)}')
+    def _scan_joystick(self, index):
+        '''
+        Provides an internal helper function for cleaner and less redundent 
+        p1 & p2 scanning functions.
+        '''
+        if(len(self.joysticks)<index+1):
+            # index will be out of range and cause exception.
+            return None
+        for i in range(self.joysticks[index].get_numhats()):
+            hat_val = self.joysticks[index].get_hat(i)
+            if(hat_val[0] or hat_val[1]):
+                print(f'Hat: {i}, Value: {self.joysticks[index].get_hat(i)}')
                 return Vector(hat_val[0], hat_val[1]*-1)
+        
+        x = None
+        y = None
+        # no input on hats so check joysticks
+        for i in range(self.joysticks[index].get_numaxes()):
+            if(i==0): # left joystick x axis
+                x = self.joysticks[index].get_axis(i)
+            if(i==1): # left joystick y axis
+                y = self.joysticks[index].get_axis(i)
+        if (x and y):
+            if(abs(x) > abs(y) and abs(x) > self.joystick_threshold):
+                return Vector.left() if x < 0 else Vector.right()
+            elif(abs(y) > abs(x) and abs(y) > self.joystick_threshold):
+                return Vector.up() if y < 0 else Vector.down()
 
         return None
+
+
+    def scan_p1(self, pygame_event):
+        return self._scan_joystick(0)
+
     def scan_p2(self, pygame_event):
-        return None
+        return self._scan_joystick(1)
 
 class GameState():
     CLOSE = 0
