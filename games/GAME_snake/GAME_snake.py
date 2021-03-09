@@ -14,18 +14,22 @@ import os, sys, time, random, platform
 # Can be used to train agents in TensorFlow maybe?
 run_headless = True if __name__ != "__main__" else False 
 screen_size = (800,480)
+play_area_size = (min(screen_size), min(screen_size))
 if(not(run_headless)):
     import pygame
     pygame.init()
     flags = pygame.FULLSCREEN if platform.system().lower() == 'linux' else 0
     screen = pygame.display.set_mode(size=screen_size, flags=flags)
+    screen.fill((60, 60, 60))
+    play_area = pygame.surface.Surface(play_area_size)
+    # screen.blit(play_area, (0,0))
     clock = pygame.time.Clock()
 
 def main():
     """
     Running the main game loop and renders the game using pygame module.
     """
-    game_env = Environment(screen_size, 10, False)
+    game_env = Environment(play_area_size, 10, False)
     game_env.game_state = GameState(GameState.SETUP)
     refresh_delay = 0.02
     last_refresh = 0
@@ -37,7 +41,8 @@ def main():
         if(game_env.game_state == GameState.CLOSE):
             break
         if(game_env.game_state == GameState.SETUP):
-            screen.fill(Colors.BLACK)
+            play_area.fill(Colors.BLACK)
+
             game_env.restart()
             p1_next_move = None
             p2_next_move = None
@@ -80,6 +85,7 @@ def main():
                     game_env.snakes[1].draw(Colors.GREEN)
             else:
                 game_env.snakes[0].draw(Colors.GREEN)
+        screen.blit(play_area, (int(screen_size[0]/2)-int(play_area_size[0]/2),0))
         pygame.display.update()
         clock.tick(tic_rate)
 
@@ -241,6 +247,7 @@ class Colors():
     BLUE = (0, 0, 255)
     TRON_RED = (255, 100, 0)
     TRON_BLUE = (87, 227, 255)
+    GRAY = (60, 60, 60)
     def __init__(self):
         pass
 
@@ -350,7 +357,7 @@ class Cell():
         '''
         if(not(run_headless)):
             pygame.draw.rect(
-                screen,
+                play_area,
                 color,
                 self.rect
             )
