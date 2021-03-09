@@ -526,7 +526,7 @@ class Environment():
                 int(self.size_y/2), 
                 self.cell_size, 
                 self,
-                length=3
+                length=5
             ))
         else:
             self.snakes.append(Snake(
@@ -534,7 +534,7 @@ class Environment():
                 int(self.size_y/3), 
                 self.cell_size, 
                 self,
-                length=3, 
+                length=5, 
                 direction=Vector.right(),
                 color=Colors.TRON_RED
             ))
@@ -543,7 +543,7 @@ class Environment():
                 int(self.size_y/3)*2, 
                 self.cell_size, 
                 self,
-                length=3,
+                length=5,
                 direction=Vector.left(),
                 color=Colors.TRON_BLUE
             ))
