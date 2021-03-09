@@ -46,6 +46,7 @@ def main():
             game_env.game_state.set(GameState.SETUP)
             continue
         if(game_env.game_state == GameState.PLAY):
+            input_interface.prepare()
             for event in pygame.event.get():
                 if(event.type == pygame.QUIT):
                     game_env.game_state.set(GameState.CLOSE)
@@ -54,6 +55,7 @@ def main():
                     if(event.key == pygame.K_ESCAPE):
                         game_env.game_state.set(GameState.CLOSE)
                         break
+                
                 p1_input = input_interface.scan_p1(event)
                 p2_input = input_interface.scan_p2(event)
                 if(p1_input):
@@ -84,6 +86,14 @@ def main():
 class InputInterface():
     # informal interface. Mostly just here to demonstrate what the intentional 
     #   use is.
+    def prepare(self):
+        '''
+        This acts as preparation function which is called right before inputs are 
+        scanned from pygame module. This is to allow for reinitialization of some interfaces
+        like gamepads which could potentially become disconnected. 
+        '''
+        pass
+
     def scan_p1(self):
         '''
         Override this funtion to define your scanning function for player 1. 
@@ -139,15 +149,20 @@ class GamePadInput(InputInterface):
 
         :param joystick_threshold: Joystick values range from -1 to 1. The threshold 
         represents the value in which the absolute value of the reading will be accepted. 
+        This is to help with joystick drift and jitters from input.
         """
         self.joystick_threshold = joystick_threshold
         pygame.joystick.init()
         self.joysticks = list()
+
+    def _get_joystics(self):
+        self.joysticks = list()
         for i in range(pygame.joystick.get_count()):
             self.joysticks.append(pygame.joystick.Joystick(i))
             self.joysticks[i].init()
-            print(f'Added Gamepad: {self.joysticks[i].get_guid()}')
-        
+            # print(f'Added Gamepad: {self.joysticks[i].get_guid()}')
+            # print (f'Game pad {i} initialized: ' + str(self.joysticks[i].get_init()))
+
     def _scan_joystick(self, index):
         '''
         Provides an internal helper function for cleaner and less redundent 
@@ -175,15 +190,20 @@ class GamePadInput(InputInterface):
                 return Vector.left() if x < 0 else Vector.right()
             elif(abs(y) > abs(x) and abs(y) > self.joystick_threshold):
                 return Vector.up() if y < 0 else Vector.down()
-
+        
         return None
-
 
     def scan_p1(self, pygame_event):
         return self._scan_joystick(0)
 
     def scan_p2(self, pygame_event):
         return self._scan_joystick(1)
+
+    def prepare(self):
+        '''
+        Runs prior to checking for input from the gamepads.
+        '''
+        self._get_joystics()
 
 class GameState():
     CLOSE = 0
