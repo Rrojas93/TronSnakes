@@ -20,7 +20,8 @@ if(not(run_headless)):
     pygame.init()
     flags = pygame.FULLSCREEN if platform.system().lower() == 'linux' else 0
     screen = pygame.display.set_mode(size=screen_size, flags=flags)
-    screen.fill((60, 60, 60))
+    background_color = (60, 60, 60)
+    screen.fill(background_color)
     play_area = pygame.surface.Surface(play_area_size)
     # screen.blit(play_area, (0,0))
     clock = pygame.time.Clock()
@@ -31,6 +32,20 @@ def main():
     """
     game_env = Environment(play_area_size, 10, False)
     game_env.game_state = GameState(GameState.SETUP)
+    left_text_area = TextArea(
+        0, 
+        0, 
+        int((screen_size[0]-play_area_size[0])/2),
+        screen_size[1], 
+        screen
+    )
+    right_text_area = TextArea(
+        int(screen_size[0]/2)+int(play_area_size[0]/2), 
+        0, 
+        int((screen_size[0]-play_area_size[0])/2), 
+        screen_size[1], 
+        screen
+    )
     refresh_delay = 0.02
     last_refresh = 0
     tic_rate = 60
@@ -38,11 +53,16 @@ def main():
     p2_next_move = None
     input_interface = GamePadInput()
     while True:
+        left_text_area.reset()
+        right_text_area.reset()
+        left_text_area.print_text('Hello, World!\nMy name is bob.')
+        left_text_area.print_text('Yeet.', size=40)
+        right_text_area.print_text('Goodbye, World!')
         if(game_env.game_state == GameState.CLOSE):
             break
         if(game_env.game_state == GameState.SETUP):
+            screen.fill(background_color)
             play_area.fill(Colors.BLACK)
-
             game_env.restart()
             p1_next_move = None
             p2_next_move = None
@@ -86,6 +106,8 @@ def main():
             else:
                 game_env.snakes[0].draw(Colors.GREEN)
         screen.blit(play_area, (int(screen_size[0]/2)-int(play_area_size[0]/2),0))
+        left_text_area.draw()
+        right_text_area.draw()
         pygame.display.update()
         clock.tick(tic_rate)
 
@@ -250,6 +272,114 @@ class Colors():
     GRAY = (60, 60, 60)
     def __init__(self):
         pass
+
+class TextArea():
+    def __init__(
+        self, 
+        loc_x, 
+        loc_y, 
+        width, 
+        height, 
+        target_surface, 
+        margin_x=10, 
+        margin_y=10, 
+        font_size=20, 
+        text_color=Colors.BLACK,
+        background_color = Colors.WHITE,
+        line_height=15
+    ):
+        '''
+        Helps print out text to a surface.
+
+        :param loc_x: The top left corner x coordinate of the text area.
+        :param loc_y: The top left corner y coordinate of the text area.
+        :param width: The horizontal size of the text area.
+        :param height: The vertical size of the text area.
+        :param target_surface: The surface to draw the text on.
+        :param margin_x: Left and Right margins for the text area.
+        :param margin_y: Top and Bottom margins for the text area.
+        :param font_size: The size that the font should render at.
+        :param text_color: The color of the text as an RGB tuple. (0-255)
+        :param background_color: The color of the background as an RGB tuple. (0-255)
+        :param line_height: The vertical distance between each line.
+        '''
+        self.x = loc_x
+        self.y = loc_y
+        self.width = width
+        self.height = height
+        self.surface = target_surface
+        self.margin_x = margin_x
+        self.margin_y = margin_y
+        self.font_size = font_size
+        # self.font = pygame.font.Font(None, self.font_size)
+        self.line_height = line_height
+        self.text_color = text_color
+        self.background_color = background_color
+        self.cursor_x = 0
+        self.cursor_y = 0
+        self.reset()
+        self.surface = pygame.surface.Surface((self.width, self.height))
+        self.clear()
+    
+    def reset(self):
+        '''
+        Resets the cursor to a default location.
+        '''
+        self.reset_cursor()
+        self.clear()
+
+    def print_text(self, text:str, size=None):
+        '''
+        Prints the input text to the surface at the current cursor location.
+        '''
+        if(size is None):
+            size = self.font_size
+        text_lines = text.splitlines()
+        for line in text_lines:
+            font = pygame.font.Font(None, size)
+            text_bit_map = font.render(line, True, self.text_color)
+            self.surface.blit(text_bit_map, (self.cursor_x, self.cursor_y))
+            self.new_line()
+
+    def new_line(self):
+        '''
+        Moves the cursor down by line_height and resets the cursors horizontal 
+        position.
+        '''
+        self.cursor_y += self.line_height
+        self.reset_cursor_x()
+    
+    def reset_cursor(self):
+        '''
+        Resets the cursor position to the default starting location.
+        '''
+        self.set_cursor(0,0)
+
+    def reset_cursor_x(self):
+        '''
+        Resets the cursor position on the x axis to the left most location of 
+        the text area.
+        '''
+        self.cursor_x = self.margin_x
+
+    def set_cursor(self, x, y):
+        '''
+        Sets the cursor location relative to the text area.
+        '''
+        self.cursor_x = self.margin_x + x
+        self.cursor_y = self.margin_y + self.line_height + y
+
+    def clear(self):
+        '''
+        Clears the text area by filling with the background color.
+        '''
+        self.surface.fill(self.background_color)
+
+    def draw(self):
+        '''
+        Draws the text area surface onto the screen surface.
+        '''
+        screen.blit(self.surface, (self.x, self.y))
 
 class Vector():
     """
