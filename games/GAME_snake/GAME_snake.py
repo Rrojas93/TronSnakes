@@ -143,7 +143,7 @@ class KeyboardInput(InputInterface):
         return None
 
 class GamePadInput(InputInterface):
-    def __init__(self, joystick_threshold=0.5):
+    def __init__(self, joystick_threshold=0.4):
         """
         Provides an interface for a gamepad as an input. 
 
