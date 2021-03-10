@@ -298,10 +298,10 @@ class ImageAssets():
     def __init__(self):
         gameDir = os.path.dirname(os.path.abspath(__file__))
         assetsDir = os.path.join(gameDir, 'assets')
-        self.BUTTON_A = pygame.image.load(os.path.join(assetsDir, 'xbox_button_a.png')).convert_alpha()
-        self.BUTTON_START = pygame.image.load(os.path.join(assetsDir, 'xbox_button_start.png')).convert_alpha()
-        self.BUTTON_SELECT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_select.png')).convert_alpha()
-        self.JOYSTICK_LEFT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_left_joystick.png'))
+        self.BUTTON_A = pygame.image.load(os.path.join(assetsDir, 'xbox_button_a.bmp')).convert_alpha()
+        self.BUTTON_START = pygame.image.load(os.path.join(assetsDir, 'xbox_button_start.bmp')).convert_alpha()
+        self.BUTTON_SELECT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_select.bmp')).convert_alpha()
+        self.JOYSTICK_LEFT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_left_joystick.bmp'))
 
 
 class InputInterface():
@@ -425,6 +425,7 @@ class GamePadInput(InputInterface):
         self.joysticks = list()
         self.last_press_time = 0
         self.press_delay = 0.3
+        self._get_joystics()
 
     def _get_joystics(self):
         self.joysticks = list()
@@ -512,7 +513,8 @@ class GamePadInput(InputInterface):
         '''
         Runs prior to checking for input from the gamepads.
         '''
-        self._get_joystics()
+        pass
+        # self._get_joystics()
 
 class GameState():
     CLOSE = 'CLOSE'
