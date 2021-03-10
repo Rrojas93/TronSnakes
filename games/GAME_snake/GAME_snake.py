@@ -147,7 +147,10 @@ def main():
                     game_env.snakes[0].draw(Colors.LIGHT_GRAY)
                     game_env.snakes[1].draw(Colors.GREEN)
             else:
-                game_env.snakes[0].draw(Colors.GREEN)
+                if(game_env.round > 3): # player died 
+                    game_env.snakes[0].draw(Colors.RED)
+                else: # Won the game and skips gameover state so round does not increment.
+                    game_env.snakes[0].draw(Colors.GREEN)
             p1_option_input = None
             p2_option_input = None
             for event in pygame.event.get():
@@ -157,7 +160,7 @@ def main():
                     p2_option_input = input_interface.scan_p2_options(event)
             options = [p1_option_input, p2_option_input]
             if(InputInterface.ACTION_CONFIRM in options):
-                game_env.round = 0
+                game_env.round = 0 if game_env.two_players else 3
                 game_env.p1_score = 0
                 game_env.p2_score = 0
                 game_env.game_state.set(GameState.SETUP)
@@ -957,6 +960,7 @@ class Environment():
                 self,
                 length=5
             ))
+            self.round = 3
         else:
             self.snakes.append(Snake(
                 int(self.size_x/3), 
