@@ -30,7 +30,7 @@ def main():
     """
     Running the main game loop and renders the game using pygame module.
     """
-    game_env = Environment(play_area_size, 10, False)
+    game_env = Environment(play_area_size, 10, True)
     game_env.game_state = GameState(GameState.SETUP)
     left_text_area = TextArea(
         0, 
@@ -46,20 +46,22 @@ def main():
         screen_size[1], 
         screen
     )
-    refresh_delay = 0.02
+    refresh_delay = 0.04
     last_refresh = 0
     tic_rate = 60
     p1_next_move = None
     p2_next_move = None
-    input_interface = GamePadInput()
+    input_interface = KeyboardInput()
     while True:
+        # LOOP SETUP
         left_text_area.reset()
         right_text_area.reset()
-        left_text_area.print_text('Hello, World!\nMy name is bob.')
-        left_text_area.print_text('Yeet.', size=40)
-        right_text_area.print_text('Goodbye, World!')
+
+        # === STATE: CLOSE
         if(game_env.game_state == GameState.CLOSE):
             break
+
+        # === STATE: SETUP
         if(game_env.game_state == GameState.SETUP):
             screen.fill(background_color)
             play_area.fill(Colors.BLACK)
@@ -67,9 +69,16 @@ def main():
             p1_next_move = None
             p2_next_move = None
             last_refresh = 0
+
+        # === STATE: GAMEOVER
         if(game_env.game_state == GameState.GAMEOVER):
             game_env.game_state.set(GameState.SETUP)
+            game_env.round += 1
+            if(game_env.round > 3):
+                game_env.game_state.set(GameState.WIN)
             continue
+
+        # === STATE: PLAY
         if(game_env.game_state == GameState.PLAY):
             input_interface.prepare()
             for event in pygame.event.get():
@@ -80,9 +89,8 @@ def main():
                     if(event.key == pygame.K_ESCAPE):
                         game_env.game_state.set(GameState.CLOSE)
                         break
-                
-                p1_input = input_interface.scan_p1(event)
-                p2_input = input_interface.scan_p2(event)
+                p1_input = input_interface.scan_p1_movement(event)
+                p2_input = input_interface.scan_p2_movement(event)
                 if(p1_input):
                     p1_next_move = p1_input
                 if(p2_input):
@@ -97,23 +105,94 @@ def main():
                         p2_next_move = None
                 game_env.update()
                 last_refresh = time.time()
-        if(game_env.game_state == GameState.WIN and any([s.color != Colors.GREEN for s in game_env.snakes])):
-            if(two_players):
-                if(len(game_env.snakes[0]) > len(game_env.snakes[1])):
+
+        # === STATE: WIN
+        if(game_env.game_state == GameState.WIN):
+            if(game_env.two_players):
+                if(game_env.p1_score > game_env.p2_score):
                     game_env.snakes[0].draw(Colors.GREEN)
+                    game_env.snakes[1].draw(Colors.GRAY)
                 else:
+                    game_env.snakes[0].draw(Colors.GRAY)
                     game_env.snakes[1].draw(Colors.GREEN)
             else:
                 game_env.snakes[0].draw(Colors.GREEN)
+            p1_option_input = None
+            p2_option_input = None
+            for event in pygame.event.get():
+                if(p1_option_input is None):
+                    p1_option_input = input_interface.scan_p1_options(event)
+                if(p2_option_input is None):
+                    p2_option_input = input_interface.scan_p2_options(event)
+            options = [p1_option_input, p2_option_input]
+            if(InputInterface.ACTION_CONFIRM in options):
+                game_env.round = 0
+                game_env.p1_score = 0
+                game_env.p2_score = 0
+                game_env.game_state.set(GameState.SETUP)
+
+        # === STATE: ANY/ALL
         screen.blit(play_area, (int(screen_size[0]/2)-int(play_area_size[0]/2),0))
+        if(game_env.two_players):
+            update_text_two_player(left_text_area, game_env.snakes[0], game_env)
+            update_text_two_player(right_text_area, game_env.snakes[1], game_env)
+        else:
+            update_text_single_player(left_text_area, right_text_area, game_env)
+            
         left_text_area.draw()
         right_text_area.draw()
         pygame.display.update()
         clock.tick(tic_rate)
+    
+def update_text_single_player(left_area, right_area, game_env):
+    '''
+    Updates the text areas for one player scenarios.
+    '''
+    pass
 
+def update_text_two_player(text_area_obj, snake_obj, game_env):
+    '''
+    Updates the text areas for two player scenarious.
+    '''
+    # Add title text
+    text_area_obj.set_cursor(10, 0)
+    text_area_obj.print_text(f'Player {"1" if snake_obj.player_one else "2"}', color=snake_obj.color, size=45)
+
+    # Add score label
+    text_area_obj.new_line(number_of_lines=2)
+    text_area_obj.set_cursor(30, text_area_obj.cursor_y)
+    text_area_obj.print_text(f'Score', size=40, color=snake_obj.color)
+
+    # Add score
+    text_area_obj.new_line()
+    text_area_obj.set_cursor(55, text_area_obj.cursor_y)
+    text_area_obj.print_text(f'{game_env.p1_score if snake_obj.player_one else game_env.p2_score}', size=60, color=snake_obj.color)
+
+    # Add round label
+    text_area_obj.new_line()
+    text_area_obj.set_cursor(25, text_area_obj.cursor_y)
+    text_area_obj.print_text(f'Round', size=40)
+
+    # Add round
+    text_area_obj.new_line()
+    if(game_env.round <= 3):
+        text_area_obj.set_cursor(55, text_area_obj.cursor_y)
+        text_area_obj.print_text(f'{game_env.round}', size=60)
+    else:
+        text_area_obj.set_cursor(30, text_area_obj.cursor_y)
+        text_area_obj.print_text("GAME\n\nOVER", size=40)
+    
 class InputInterface():
     # informal interface. Mostly just here to demonstrate what the intentional 
     #   use is.
+    ACTION_CONFIRM = 'CONFIRM'
+    ACTION_PAUSE = 'PAUSE'
+    ACTION_RETURN = 'RETURN'
+    ACTION_EXIT = 'EXIT'
+    ACTION_UP = 'UP'
+    ACTION_DOWN = 'DOWN'
+    ACTION_LEFT = 'LEFT'
+    ACTION_RIGHT = 'RIGHT'
     def prepare(self):
         '''
         This acts as preparation function which is called right before inputs are 
@@ -122,9 +201,9 @@ class InputInterface():
         '''
         pass
 
-    def scan_p1(self):
+    def scan_p1_movement(self, pygame_event):
         '''
-        Override this funtion to define your scanning function for player 1. 
+        Override this funtion to define your movement scanning function for player 1. 
         No input from p1 should return None. This function must return any of the 
         following vectors:
         Vector.up()
@@ -134,9 +213,17 @@ class InputInterface():
         '''
         pass
 
-    def scan_p2(self):
+    def scan_p1_options(self, pygame_event):
         '''
-        Override this function to define your scanning function for player 2.
+        Override this function to define your scanning function for player 1 
+        option inputs. This is any input that can be returned for things like 
+        pause, accept, back, etc.
+        '''
+        pass
+
+    def scan_p2_movement(self, pygame_event):
+        '''
+        Override this function to define your movement scanning function for player 2.
         No input from p2 should return None. This function must return any of the 
         following vectors:
         Vector.up()
@@ -146,8 +233,16 @@ class InputInterface():
         '''
         pass
 
+    def scan_p2_options(self, pygame_event):
+        '''
+        Override this function to define your scanning function for player 2 
+        option inputs. This is any input that can be returned for things like 
+        pause, accept, back, etc.
+        '''
+        
+
 class KeyboardInput(InputInterface):
-    def scan_p2(self, pygame_event):
+    def scan_p2_movement(self, pygame_event):
         if(pygame_event.type == pygame.KEYDOWN):
             if(pygame_event.key == pygame.K_UP):
                 return Vector.up()
@@ -158,7 +253,7 @@ class KeyboardInput(InputInterface):
             elif(pygame_event.key == pygame.K_RIGHT):
                 return Vector.right()
         return None
-    def scan_p1(self, pygame_event):
+    def scan_p1_movement(self, pygame_event):
         if(pygame_event.type == pygame.KEYDOWN):
             if(pygame_event.key == pygame.K_w):
                 return Vector.up()
@@ -169,6 +264,29 @@ class KeyboardInput(InputInterface):
             elif(pygame_event.key == pygame.K_d):
                 return Vector.right()
         return None
+
+    def scan_p1_options(self, pygame_event):
+        if(pygame_event.type == pygame.KEYDOWN):
+            if(pygame_event.key == pygame.K_SPACE):
+                return self.ACTION_CONFIRM
+            if(pygame_event.key == pygame.K_p):
+                return self.ACTION_PAUSE
+            if(pygame_event.key == pygame.K_BACKSPACE):
+                return self.ACTION_RETURN
+            if(pygame_event.key == pygame.K_ESCAPE):
+                return self.ACTION_EXIT
+            if(pygame_event.key in [pygame.K_w, pygame.K_UP]):
+                return self.ACTION_UP
+            if(pygame_event.key in [pygame.K_a, pygame.K_LEFT]):
+                return self.ACTION_LEFT
+            if(pygame_event.key in [pygame.K_s, pygame.K_DOWN]):
+                return self.ACTION_DOWN
+            if(pygame_event.key in [pygame.K_d, pygame.K_RIGHT]):
+                return self.ACTION_RIGHT
+        return None
+
+    def scan_p2_options(self, pygame_event):
+        return self.scan_p1_options(pygame_event)
 
 class GamePadInput(InputInterface):
     def __init__(self, joystick_threshold=0.4):
@@ -191,7 +309,7 @@ class GamePadInput(InputInterface):
             # print(f'Added Gamepad: {self.joysticks[i].get_guid()}')
             # print (f'Game pad {i} initialized: ' + str(self.joysticks[i].get_init()))
 
-    def _scan_joystick(self, index):
+    def _scan_joystick_movement(self, index):
         '''
         Provides an internal helper function for cleaner and less redundent 
         p1 & p2 scanning functions.
@@ -221,11 +339,43 @@ class GamePadInput(InputInterface):
         
         return None
 
-    def scan_p1(self, pygame_event):
-        return self._scan_joystick(0)
+    def _scan_joystick_options(self, index, game_event):
+        '''
+        Returns the input from the joystick for option type actions.
+        '''
+        if(len(self.joysticks)<index+1):
+            # index will be out of range and cause exception.
+            return None
+        joystick = self.joysticks[index]
+        if(game_event.type == pygame.JOYBUTTONDOWN):
+            if(joystick.get_button(0)):
+                return self.ACTION_CONFIRM
+            if(joystick.get_button(1)):
+                return self.ACTION_RETURN
+            if(joystick.get_button(7)):
+                return self.ACTION_PAUSE
+            movement_keys = self._scan_joystick_movement(index)
+            if(movement_keys == Vector.up()):
+                return self.ACTION_UP
+            if(movement_keys == Vector.down()):
+                return self.ACTION_DOWN
+            if(movement_keys == Vector.left()):
+                return self.ACTION_LEFT
+            if(movement_keys == Vector.right()):
+                return self.ACTION_RIGHT
+        return None
 
-    def scan_p2(self, pygame_event):
-        return self._scan_joystick(1)
+    def scan_p1_movement(self, pygame_event):
+        return self._scan_joystick_movement(0)
+
+    def scan_p2_movement(self, pygame_event):
+        return self._scan_joystick_movement(1)
+
+    def scan_p1_options(self, pygame_event):
+        return self._scan_joystick_options(0, pygame_event)
+
+    def scan_p2_options(self, pygame_event):
+        return self._scan_joystick_options(1, pygame_event)
 
     def prepare(self):
         '''
@@ -234,30 +384,22 @@ class GamePadInput(InputInterface):
         self._get_joystics()
 
 class GameState():
-    CLOSE = 0
-    SETUP = 1
-    PLAY = 2
-    GAMEOVER = 3
-    WIN = 4
-    NONESTATE = 5
-    def __init__(self, state=1):
+    CLOSE = 'CLOSE'
+    SETUP = 'SETUP'
+    PLAY = 'PLAY'
+    GAMEOVER = 'GAMEOVER'
+    WIN = 'WIN'
+    PAUSE = 'PAUSE'
+    NONESTATE = 'NONESTATE'
+    def __init__(self, state='SETUP'):
         self.state = state
 
     def __eq__(self, other):
         if(isinstance(other, GameState)):
             return self.state == other.state
-        elif(isinstance(other, int)):
+        elif(isinstance(other, str)): # to compare with other instances or native types
             return self.state == other
-    
-    def next(self)->int:
-        '''
-        Changes the current state to the next state. If NONESTATE is reached or 
-        passed, will reset back to state = 1.
-        '''
-        self.state += 1
-        if(self.state >= GameState.NONESTATE):
-            self.state = 1
-    
+        
     def set(self, new_state):
         self.state = new_state
 
@@ -328,25 +470,29 @@ class TextArea():
         self.reset_cursor()
         self.clear()
 
-    def print_text(self, text:str, size=None):
+    def print_text(self, text:str, size=None, color=None):
         '''
         Prints the input text to the surface at the current cursor location.
         '''
         if(size is None):
             size = self.font_size
+        if(color is None):
+            color = self.text_color
         text_lines = text.splitlines()
+        starting_x = self.cursor_x
         for line in text_lines:
             font = pygame.font.Font(None, size)
-            text_bit_map = font.render(line, True, self.text_color)
+            text_bit_map = font.render(line, True, color)
             self.surface.blit(text_bit_map, (self.cursor_x, self.cursor_y))
             self.new_line()
+            self.cursor_x = starting_x
 
-    def new_line(self):
+    def new_line(self, number_of_lines=1):
         '''
         Moves the cursor down by line_height and resets the cursors horizontal 
         position.
         '''
-        self.cursor_y += self.line_height
+        self.cursor_y += self.line_height * number_of_lines
         self.reset_cursor_x()
     
     def reset_cursor(self):
@@ -525,12 +671,15 @@ class Snake():
         color=Colors.WHITE,
         length=3,
         direction=Vector.up(),
+        player_one=True
     ):
         self.cell_size = cell_size
         self.env = environment
         self.color = color
+        self.init_length = length
         self.length = length
         self.direction = direction
+        self.player_one = player_one
         self.head = None
         self.tail = None
         self.__create(init_location_x, init_location_y)
@@ -571,6 +720,10 @@ class Snake():
         new_loc_y = self.head.y + self.direction.y
         
         if(self.env.is_out_of_bounds(new_loc_x, new_loc_y)):
+            if(self.player_one):
+                self.env.p1_score -= 1 if self.env.p1_score > 0 else 0
+            else:
+                self.env.p2_score -= 1 if self.env.p2_score > 0 else 0
             return False # snake dies, went out of bounds.
         else:
             location_contents = self.env.get_location_contents(new_loc_x, new_loc_y)
@@ -589,9 +742,17 @@ class Snake():
                 # it is food. eat it.
                 self.add_to_head(location_contents, adjust_length=True)
                 self.env.food = None
+                if(self.color == Colors.TRON_RED):
+                    self.env.p1_score += 1
+                else:
+                    self.env.p2_score += 1
                 return True
             else:
                 # the new location contains a cell that belongs to a snake. 
+                if(self.player_one):
+                    self.env.p1_score -= 1 if self.env.p1_score > 0 else 0
+                else:
+                    self.env.p2_score -= 1 if self.env.p2_score > 0 else 0
                 return False # snake dies, collided with self or another snake.
 
     def change_direction(self, new_direction:Vector):
@@ -647,6 +808,9 @@ class Environment():
         self.size_x = int(resolution[0]/cell_size)
         self.size_y = int(resolution[1]/cell_size)
         self.two_players = two_players
+        self.round = 0
+        self.p1_score = 0
+        self.p2_score = 0
 
         self._set_volatile_params()
 
@@ -682,12 +846,12 @@ class Environment():
                 self,
                 length=5,
                 direction=Vector.left(),
-                color=Colors.TRON_BLUE
+                color=Colors.TRON_BLUE,
+                player_one=False
             ))
         self.add_food()
         self.game_state.set(GameState.PLAY)
 
-        
     def add_food(self):
         '''
         If there is no food on the map, add one.
