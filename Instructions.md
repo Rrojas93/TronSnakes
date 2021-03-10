@@ -21,3 +21,8 @@
 | ![Start Button](./assets/xbox_button_start.png) | Press the Start Button to pause the game.
 | ![A Button](./assets/xbox_button_a.png) | Press the 'A' Button to play again.
 | ![Select Button](./assets/xbox_button_select.png) | Press the "Select" Button to swap between single player and two player modes (only usable while the game is paused or the end of rounds).
+
+---
+
+## Want to See the Code? Scan the QR Below!
+![Repo QR](./assets/repoQR.png)
