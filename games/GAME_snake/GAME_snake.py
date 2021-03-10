@@ -37,25 +37,38 @@ def main():
         0, 
         int((screen_size[0]-play_area_size[0])/2),
         screen_size[1], 
-        screen
+        screen, 
+        background_color=Colors.GRAY, 
+        text_color=Colors.WHITE
     )
     right_text_area = TextArea(
         int(screen_size[0]/2)+int(play_area_size[0]/2), 
         0, 
         int((screen_size[0]-play_area_size[0])/2), 
         screen_size[1], 
-        screen
+        screen,
+        background_color=Colors.GRAY, 
+        text_color=Colors.WHITE
     )
+    screen_text_area = TextArea(
+        (int(screen_size[0]/2)-int(play_area_size[0]/2)), 0, 
+        min(screen_size), min(screen_size),
+        screen, 
+        background_color=Colors.BLACK, 
+        text_color=Colors.WHITE
+    )
+    assets = ImageAssets()
     refresh_delay = 0.04
     last_refresh = 0
     tic_rate = 60
     p1_next_move = None
     p2_next_move = None
-    input_interface = KeyboardInput()
+    input_interface = GamePadInput()
     while True:
         # LOOP SETUP
         left_text_area.reset()
         right_text_area.reset()
+        screen_text_area.reset()
 
         # === STATE: CLOSE
         if(game_env.game_state == GameState.CLOSE):
@@ -81,6 +94,8 @@ def main():
         # === STATE: PLAY
         if(game_env.game_state == GameState.PLAY):
             input_interface.prepare()
+            p1_options = None
+            p2_options = None
             for event in pygame.event.get():
                 if(event.type == pygame.QUIT):
                     game_env.game_state.set(GameState.CLOSE)
@@ -89,12 +104,25 @@ def main():
                     if(event.key == pygame.K_ESCAPE):
                         game_env.game_state.set(GameState.CLOSE)
                         break
+                # check for game movement.
                 p1_input = input_interface.scan_p1_movement(event)
                 p2_input = input_interface.scan_p2_movement(event)
                 if(p1_input):
                     p1_next_move = p1_input
                 if(p2_input):
                     p2_next_move = p2_input
+                # check for option input events
+                if(p1_options is None):
+                    p1_options = input_interface.scan_p1_options(event)
+                if(p2_options is None):
+                    p2_options = input_interface.scan_p2_options(event)
+            options = [p1_options, p2_options]
+            if(input_interface.ACTION_PAUSE in options):
+                game_env.game_state.set(GameState.PAUSE)
+            if(input_interface.ACTION_EXIT in options):
+                game_env.game_state.set(GameState.CLOSE)
+            
+            # If refresh for movement is ready.
             if(time.time() > last_refresh+refresh_delay):
                 if(p1_next_move is not None):
                     game_env.snakes[0].change_direction(p1_next_move)
@@ -109,11 +137,14 @@ def main():
         # === STATE: WIN
         if(game_env.game_state == GameState.WIN):
             if(game_env.two_players):
-                if(game_env.p1_score > game_env.p2_score):
+                if(game_env.p1_score == game_env.p2_score):
+                    game_env.snakes[0].draw(Colors.LIGHT_GRAY)
+                    game_env.snakes[1].draw(Colors.LIGHT_GRAY)
+                elif(game_env.p1_score > game_env.p2_score):
                     game_env.snakes[0].draw(Colors.GREEN)
-                    game_env.snakes[1].draw(Colors.GRAY)
+                    game_env.snakes[1].draw(Colors.LIGHT_GRAY)
                 else:
-                    game_env.snakes[0].draw(Colors.GRAY)
+                    game_env.snakes[0].draw(Colors.LIGHT_GRAY)
                     game_env.snakes[1].draw(Colors.GREEN)
             else:
                 game_env.snakes[0].draw(Colors.GREEN)
@@ -130,27 +161,82 @@ def main():
                 game_env.p1_score = 0
                 game_env.p2_score = 0
                 game_env.game_state.set(GameState.SETUP)
+            if(InputInterface.ACTION_EXIT in options):
+                game_env.game_state.set(GameState.CLOSE)
+                continue
+            if(InputInterface.ACTION_ALTERNATE in options):
+                game_env = Environment(play_area_size, 10, not(game_env.two_players))
+                game_env.game_state = GameState(GameState.SETUP)
+                continue
+        
+        if(game_env.game_state == GameState.PAUSE):
+            p1_option_input = None
+            p2_option_input = None
+            for event in pygame.event.get():
+                if(p1_option_input is None):
+                    p1_option_input = input_interface.scan_p1_options(event)
+                if(p2_option_input is None):
+                    p2_option_input = input_interface.scan_p2_options(event)
+            options = [p1_option_input, p2_option_input]
+            if(InputInterface.ACTION_EXIT in options):
+                game_env.game_state.set(GameState.CLOSE)
+            if(InputInterface.ACTION_PAUSE in options or InputInterface.ACTION_RETURN in options):
+                game_env.game_state.set(GameState.PLAY)
+            if(InputInterface.ACTION_ALTERNATE in options):
+                # Swap between single and two players
+                game_env = Environment(play_area_size, 10, not(game_env.two_players))
+                game_env.game_state = GameState(GameState.SETUP)
+                continue
+            
+            update_pause_text(screen_text_area, assets)
+
+                
 
         # === STATE: ANY/ALL
         screen.blit(play_area, (int(screen_size[0]/2)-int(play_area_size[0]/2),0))
         if(game_env.two_players):
-            update_text_two_player(left_text_area, game_env.snakes[0], game_env)
-            update_text_two_player(right_text_area, game_env.snakes[1], game_env)
+            update_text_two_player(left_text_area, game_env.snakes[0], game_env, assets)
+            update_text_two_player(right_text_area, game_env.snakes[1], game_env, assets)
         else:
-            update_text_single_player(left_text_area, right_text_area, game_env)
+            update_text_single_player(left_text_area, game_env, assets)
+            update_text_single_player(right_text_area, game_env, assets)
             
         left_text_area.draw()
         right_text_area.draw()
+        if(game_env.game_state.state in [GameState.PAUSE]):
+            screen_text_area.draw()
         pygame.display.update()
         clock.tick(tic_rate)
     
-def update_text_single_player(left_area, right_area, game_env):
+def update_text_single_player(text_area_obj, game_env, assets):
     '''
     Updates the text areas for one player scenarios.
     '''
-    pass
+    # Add title text
+    text_area_obj.set_cursor(10, 0)
+    text_area_obj.print_text(f'Solo', size=45)
 
-def update_text_two_player(text_area_obj, snake_obj, game_env):
+
+    # Add score label
+    text_area_obj.new_line(number_of_lines=2)
+    text_area_obj.set_cursor(30, text_area_obj.cursor_y)
+    text_area_obj.print_text(f'Score', size=40)
+
+    # Add score
+    text_area_obj.new_line()
+    text_area_obj.set_cursor(55, text_area_obj.cursor_y)
+    text_area_obj.print_text(f'{game_env.p1_score}', size=60)
+
+    # Add Image assets
+    text_area_obj.surface.blit(assets.BUTTON_START, (10, 350), pygame.rect.Rect(0, 0, 35, 35))
+    text_area_obj.surface.blit(assets.JOYSTICK_LEFT, (10, 400), pygame.rect.Rect(0,0, 35, 35))
+    text_area_obj.set_cursor(50, 335)
+    text_area_obj.print_text("PAUSE")
+    text_area_obj.set_cursor(50, 385)
+    text_area_obj.print_text("MOVE")
+
+
+def update_text_two_player(text_area_obj, snake_obj, game_env, assets):
     '''
     Updates the text areas for two player scenarious.
     '''
@@ -181,7 +267,39 @@ def update_text_two_player(text_area_obj, snake_obj, game_env):
     else:
         text_area_obj.set_cursor(30, text_area_obj.cursor_y)
         text_area_obj.print_text("GAME\n\nOVER", size=40)
-    
+
+    # Add Image assets
+    text_area_obj.surface.blit(assets.BUTTON_START, (10, 325), pygame.rect.Rect(0, 0, 35, 35))
+    text_area_obj.surface.blit(assets.JOYSTICK_LEFT, (10, 375), pygame.rect.Rect(0,0, 35, 35))
+    text_area_obj.surface.blit(assets.BUTTON_A, (10, 425), pygame.rect.Rect(0,0,35,35))
+    text_area_obj.set_cursor(50, 315)
+    text_area_obj.print_text("PAUSE")
+    text_area_obj.set_cursor(50, 365)
+    text_area_obj.print_text("MOVE")
+    text_area_obj.set_cursor(50, 415)
+    text_area_obj.print_text("PLAY AGAIN")
+
+def update_pause_text(input_text_area, assets):
+    '''
+    Updates the pause text area.
+    '''
+    # input_text_area.surface.fill(Colors.BLACK)
+    input_text_area.set_cursor(120, 50)
+    input_text_area.print_text("PAUSE", size=100, color=Colors.WHITE)
+    input_text_area.surface.blit(assets.BUTTON_SELECT, (100, 250), pygame.rect.Rect(0,0,35,35))
+    input_text_area.set_cursor(150, 235)
+    input_text_area.print_text("SINGLE PLAYER / TWO PLAYER")
+
+class ImageAssets():
+    def __init__(self):
+        gameDir = os.path.dirname(os.path.abspath(__file__))
+        assetsDir = os.path.join(gameDir, 'assets')
+        self.BUTTON_A = pygame.image.load(os.path.join(assetsDir, 'xbox_button_a.png')).convert_alpha()
+        self.BUTTON_START = pygame.image.load(os.path.join(assetsDir, 'xbox_button_start.png')).convert_alpha()
+        self.BUTTON_SELECT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_select.png')).convert_alpha()
+        self.JOYSTICK_LEFT = pygame.image.load(os.path.join(assetsDir, 'xbox_button_left_joystick.png'))
+
+
 class InputInterface():
     # informal interface. Mostly just here to demonstrate what the intentional 
     #   use is.
@@ -189,6 +307,7 @@ class InputInterface():
     ACTION_PAUSE = 'PAUSE'
     ACTION_RETURN = 'RETURN'
     ACTION_EXIT = 'EXIT'
+    ACTION_ALTERNATE = 'ALTERNATE'
     ACTION_UP = 'UP'
     ACTION_DOWN = 'DOWN'
     ACTION_LEFT = 'LEFT'
@@ -300,6 +419,8 @@ class GamePadInput(InputInterface):
         self.joystick_threshold = joystick_threshold
         pygame.joystick.init()
         self.joysticks = list()
+        self.last_press_time = 0
+        self.press_delay = 0.3
 
     def _get_joystics(self):
         self.joysticks = list()
@@ -348,20 +469,26 @@ class GamePadInput(InputInterface):
             return None
         joystick = self.joysticks[index]
         if(game_event.type == pygame.JOYBUTTONDOWN):
-            if(joystick.get_button(0)):
+            if(joystick.get_button(0) and time.time() > self.last_press_time+self.press_delay):
+                self.last_press_time = time.time()
                 return self.ACTION_CONFIRM
-            if(joystick.get_button(1)):
+            if(joystick.get_button(1) and time.time() > self.last_press_time+self.press_delay):
+                self.last_press_time = time.time()
                 return self.ACTION_RETURN
-            if(joystick.get_button(7)):
+            if(joystick.get_button(7) and time.time() > self.last_press_time+self.press_delay):
+                self.last_press_time = time.time()
                 return self.ACTION_PAUSE
+            if(joystick.get_button(6) and time.time() > self.last_press_time+self.press_delay):
+                self.last_press_time = time.time()
+                return self.ACTION_ALTERNATE
             movement_keys = self._scan_joystick_movement(index)
-            if(movement_keys == Vector.up()):
+            if(movement_keys == Vector.up() and time.time() > self.last_press_time+self.press_delay):
                 return self.ACTION_UP
-            if(movement_keys == Vector.down()):
+            if(movement_keys == Vector.down() and time.time() > self.last_press_time+self.press_delay):
                 return self.ACTION_DOWN
-            if(movement_keys == Vector.left()):
+            if(movement_keys == Vector.left() and time.time() > self.last_press_time+self.press_delay):
                 return self.ACTION_LEFT
-            if(movement_keys == Vector.right()):
+            if(movement_keys == Vector.right() and time.time() > self.last_press_time+self.press_delay):
                 return self.ACTION_RIGHT
         return None
 
@@ -412,6 +539,7 @@ class Colors():
     TRON_RED = (255, 100, 0)
     TRON_BLUE = (87, 227, 255)
     GRAY = (60, 60, 60)
+    LIGHT_GRAY = (160, 160, 160)
     def __init__(self):
         pass
 
@@ -521,11 +649,11 @@ class TextArea():
         '''
         self.surface.fill(self.background_color)
 
-    def draw(self):
+    def draw(self, *args, **kwargs):
         '''
         Draws the text area surface onto the screen surface.
         '''
-        screen.blit(self.surface, (self.x, self.y))
+        screen.blit(self.surface, (self.x, self.y), *args, **kwargs)
 
 class Vector():
     """
@@ -742,7 +870,7 @@ class Snake():
                 # it is food. eat it.
                 self.add_to_head(location_contents, adjust_length=True)
                 self.env.food = None
-                if(self.color == Colors.TRON_RED):
+                if(self.player_one):
                     self.env.p1_score += 1
                 else:
                     self.env.p2_score += 1
