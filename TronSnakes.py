@@ -9,6 +9,7 @@
         The game of snake. Pretty much just as simple as you can get.
 '''
 import os, sys, time, random, platform
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 # You can run this headleass if imported as a module. 
 # The calling script will handle drawing everything to the screen
 # Can be used to train agents in TensorFlow maybe?
