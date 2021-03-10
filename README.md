@@ -1,26 +1,38 @@
-# PiGames
+# Tron Snakes
 Author: Raul Rojas
 Contact: rrojas994@gmail.com
 
 ### Description:
-PiGames is a collection of simple games that utilize the pygame module. This 
-project provides its own simple game launcher which loads available games in 
-the project. 
-
-### Included Game List: 
-* Snake
+Tron snakes is a game that mixes... wait for it... Tron and Snake! There is a single
+and two player mode. Single player is just the good old classic Snake. The two 
+player mode is where the real fun is! Two players must race to the green apple
+to get larger and be able to eliminate the other player! There are three rounds
+and the winner is decided based on score (how many apples you eat) however, you 
+will lose points if you die!
 
 ### Setup
+#### Linux
 * Download project files via `git clone` or zip file. 
+* Ensure you have python 3 and pip 3 installed with `python3 -V` and `pip3 -V`
+    * To install run `sudo apt-get install python3 python3-pip`
+* Set setup.py as executable with `sudo chmod +x setup.py`
 * Run `python3 setup.py` on Linux
+* Run game with `python3 TronSnakes.py`
 
-### Usage
-* Developed in an Ubuntu Linux environment. Can't guarantee that it works anywhere 
-else.
+#### Windows
+* Ensure you have [python 3](https://www.python.org/) installed 
+* Run `python -m pip install setuptools`
+* Run `python -m pip install -r requirements.txt`
+* Run game with `python TronSnakes.py`
 
 ---
 
 ## Version History
+### V2.0.0
+* Scrapped the need for a launcher
+* Snake game is now complete and is renamed "TronSnakes.py".
+* TronSnakes is now the top level script in root directory.
+* TronSnakes supports two players or a solo player now.
 
 ### V1.0.0
 * Snake Game is now in a most basic complete state. 
